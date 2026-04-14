@@ -17,6 +17,11 @@ window.TMAP_MSA = Object.assign(
     faidxBatch: 40,
     /** When `#tmap-msa-viewer` exists, push kalign FASTA into Nightingale (see Ty1 HTML). */
     msaColorScheme: "nucleotide",
+    /** Nightingale `height` = rows×tile-height + chrome, clamped (avoids huge empty band for few sequences). */
+    msaViewerMinHeight: 88,
+    msaViewerMaxHeight: 420,
+    /** Extra px beyond row tiles (margins inside component); keep small ~1 row or you get a blank band. */
+    msaViewerHeightChrome: 14,
   },
   window.TMAP_MSA || {},
 );
@@ -320,6 +325,18 @@ function relaxNightingaleWheelZoom() {
   }
 }
 
+/** Set `nightingale-msa` height from row count so small alignments don’t leave a tall empty viewport. */
+function applyNightingaleMsaViewportHeight(msaEl, rowCount) {
+  if (!msaEl || rowCount < 1) return;
+  const cfg = window.TMAP_MSA || {};
+  const tile = Number(msaEl.getAttribute("tile-height")) || 22;
+  const minH = Number(cfg.msaViewerMinHeight) || 88;
+  const maxH = Number(cfg.msaViewerMaxHeight) || 420;
+  const chrome = Number(cfg.msaViewerHeightChrome) || 14;
+  const h = Math.min(maxH, Math.max(minH, rowCount * tile + chrome));
+  msaEl.setAttribute("height", String(Math.round(h)));
+}
+
 /**
  * Keep nightingale-manager length + initial display on MSA/nav in sync.
  * Do NOT set manager display-start/display-end: the manager reapplies them on every
@@ -327,6 +344,7 @@ function relaxNightingaleWheelZoom() {
  * See https://ebi-webcomponents.github.io/nightingale/?path=/story/components-tracks-alignments--msa
  */
 function syncNightingaleManagerAndTracks(msaEl, rows) {
+  applyNightingaleMsaViewportHeight(msaEl, rows.length);
   const mgr = msaEl.closest("nightingale-manager");
   const len = Math.max(...rows.map((r) => r.sequence.length));
   const cfg = window.TMAP_MSA || {};
@@ -407,6 +425,8 @@ function updateNightingaleMsaFromFasta(fastaText) {
     const pushData = () => {
       syncNightingaleManagerAndTracks(el, rows);
       el.data = rows;
+      /* `.data` can reset internal layout; keep height tight after bind. */
+      applyNightingaleMsaViewportHeight(el, rows.length);
       requestAnimationFrame(() => {
         relaxNightingaleWheelZoom();
         requestAnimationFrame(() => {

@@ -457,24 +457,27 @@
 
   <body>
     <!-- Same HUD ids as SILVA + msa_hud_module.js -->
-    <div id="tmap-msa-hud" style="position:fixed;right:12px;bottom:12px;max-width:min(98vw,40rem);z-index:10000;font:13px/1.35 system-ui,sans-serif;background:#fff;border:1px solid #ccc;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,.12);padding:10px;">
-      <div style="font-weight:600;margin-bottom:6px;">MSA (browser) · Ty1</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
-        <button type="button" id="tmap-msa-sync">Sync from plot</button>
-        <button type="button" id="tmap-msa-highlight-plot">Highlight on plot</button>
-        <button type="button" id="tmap-msa-clear">Clear staging</button>
-        <button type="button" id="tmap-msa-kalign">Run kalign</button>
-        <button type="button" id="tmap-msa-download">Download ALN</button>
-        <button type="button" id="tmap-msa-copy-ids">Copy IDs</button>
-        <button type="button" id="tmap-msa-verify-golden" style="display:none;">Verify golden id</button>
+    <div id="tmap-msa-hud" style="position:fixed;right:12px;bottom:12px;max-width:min(98vw,40rem);max-height:calc(100vh - 24px);z-index:10000;display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;font:13px/1.35 system-ui,sans-serif;background:#fff;border:1px solid #ccc;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,.12);padding:10px;">
+      <div style="flex-shrink:0;">
+        <div style="font-weight:600;margin-bottom:6px;">MSA (browser) · Ty1</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
+          <button type="button" id="tmap-msa-sync">Sync from plot</button>
+          <button type="button" id="tmap-msa-highlight-plot">Highlight on plot</button>
+          <button type="button" id="tmap-msa-clear">Clear staging</button>
+          <button type="button" id="tmap-msa-kalign">Run kalign</button>
+          <button type="button" id="tmap-msa-download">Download ALN</button>
+          <button type="button" id="tmap-msa-copy-ids">Copy IDs</button>
+          <button type="button" id="tmap-msa-verify-golden" style="display:none;">Verify golden id</button>
+        </div>
       </div>
+      <div id="tmap-msa-hud-body" style="flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;">
       <label style="display:block;margin-bottom:4px;">Staging (plot ↔ kalign)</label>
       <textarea id="tmap-msa-staging" rows="4" style="width:100%;box-sizing:border-box;font-family:ui-monospace,monospace;font-size:11px;"></textarea>
       <label style="display:block;margin:8px 0 4px;">Alignment</label>
       <pre id="tmap-msa-out" style="max-height:10rem;overflow:auto;background:#f6f6f6;padding:6px;font-size:10px;white-space:pre-wrap;"></pre>
       <label style="display:block;margin:8px 0 4px;">Alignment viewer (Nightingale)</label>
       <p style="margin:0 0 6px;font-size:11px;color:#555;">Use the <strong>navigator</strong> bar for overview; hover the alignment, scroll/pinch to zoom, drag to pan.</p>
-      <div id="tmap-msa-viewer-wrap" hidden style="width:100%;overflow:auto;border:1px solid #e0e0e0;border-radius:4px;background:#fff;">
+      <div id="tmap-msa-viewer-wrap" hidden style="width:100%;max-height:min(52vh,440px);overflow:auto;border:1px solid #e0e0e0;border-radius:4px;background:#fff;">
         <nightingale-manager id="tmap-msa-manager" style="display:block;width:100%;">
           <div style="padding-left:140px;box-sizing:border-box;width:100%;">
             <nightingale-navigation
@@ -500,6 +503,7 @@
         </nightingale-manager>
       </div>
       <div id="tmap-msa-status" style="margin-top:6px;color:#444;font-size:11px;"></div>
+      </div>
     </div>
 
     

@@ -9,6 +9,7 @@ Operational and design context for whoever maintains the static Faerun + MSA HUD
 - **Static export** of Faerun (Lore) scatter plots plus a fixed-position **MSA HUD**: BioWasm **Aioli** (samtools faidx + kalign) and optional **EBI Nightingale** (`nightingale-manager` + `nightingale-navigation` + `nightingale-msa`) for alignment display.
 - **No app bundler** in-repo: pages load scripts via `<script>` / `import` URLs. Nightingale is loaded from **`esm.sh`** at pinned **`@nightingale-elements/*@5.6.0`** (see `assets/tmap_silva_freqs.html` tail).
 - **Primary integration code:** `js/msa_hud_module.js` (HUD logic + Nightingale glue), `js/bridge.js` (plot selection → FASTA ids), per-page `window.TMAP_MSA` overrides in HTML.
+- **HUD layout:** `#tmap-msa-hud` is a **flex column** capped at `max-height: calc(100vh - 24px)` with **title + buttons fixed** at the top and **`#tmap-msa-hud-body`** scrollable; `#tmap-msa-viewer-wrap` has **`max-height: min(52vh, 440px)`** + `overflow:auto` so many MSA rows don’t push controls off-screen.
 
 ---
 
@@ -43,6 +44,7 @@ Defined in `msa_hud_module.js` and **merged** with page-specific `Object.assign`
 | `fixturesRel` | Prefix for fixture URLs (default `../fixtures`). |
 | `maxAlign` / `maxStaging` / `faidxBatch` | Demo limits. |
 | `msaColorScheme` | Nightingale color scheme (SILVA/Ty1 use `nucleotide`). |
+| `msaViewerMinHeight` / `msaViewerMaxHeight` / `msaViewerHeightChrome` | Clamp dynamic `nightingale-msa` **height** from row count (`rows × tile-height + chrome`). **`msaViewerHeightChrome`** should stay small (~1 row); a large value looks like blank rows under the alignment. Height is reapplied after `el.data =` in case the component resets it. |
 | `msaInitialVisibleColumns` | **SILVA only (typ.120):** if alignment length exceeds this, initial `display-end` is this value so the first view is a readable window, not the full long amplicon strip. |
 
 ---
