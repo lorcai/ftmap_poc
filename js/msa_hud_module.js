@@ -123,6 +123,15 @@ function setStatus(msg) {
   el.title = s;
 }
 
+/** Let the browser paint status text before long WASM / faidx work (avoids “first click does nothing”). */
+function yieldForStatusPaint() {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve());
+    });
+  });
+}
+
 /** Prefer stdout only — stderr (warnings, banners) must not be fed to kalign as FASTA. */
 function execToString(res) {
   if (res == null) return "";
@@ -218,7 +227,6 @@ async function getKalignOnlyCli() {
   }
   setStatus("Loading kalign (WASM)…");
   _kalignOnly = await new Aioli(["kalign/3.3.1"], { printInterleaved: false });
-  setStatus("Ready.");
   return _kalignOnly;
 }
 
@@ -248,13 +256,13 @@ async function getCli() {
   await cli.mount(plan.mountSpecs);
   _cli = cli;
   window.TMAP_MSA._faidxFilename = plan.baseFilename;
-  setStatus("Ready.");
   return _cli;
 }
 
 async function samtoolsFaidxMulti(ids) {
   const cli = await getCli();
   const b = window.TMAP_MSA._faidxFilename || referenceMountPlan().baseFilename;
+  setStatus("Reading sequences from reference…");
   let fasta = "";
   for (let i = 0; i < ids.length; i++) {
     const id = ids[i];
@@ -661,6 +669,7 @@ window.initMsaHud = function initMsaHud() {
       }
       try {
         setStatus("Fetching sequences…");
+        await yieldForStatusPaint();
         const fasta = await sequencesForIds(ids);
         if (!fasta || !fasta.includes(">")) {
           setStatus("No FASTA records — ids may not match reference (check Ty1 label → id mapping).");
