@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ftmap_poc</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.45; }
+    ul { padding-left: 1.2rem; }
+    code { background: #f0f0f0; padding: 0.1em 0.35em; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <h1>ftmap_poc</h1>
+  <p>
+    This directory is the <strong>static site root</strong> when deployed (e.g. GitHub Pages).
+    All links below are relative to this page.
+  </p>
+  <h2>SILVA demo</h2>
+  <p>
+    Precomputed SILVA layout in <code>assets/tmap_silva_freqs.js</code>; open the plot + MSA HUD.
+    Sequences load from BGZF <code>fixtures/dna-sequences.fasta.gz</code> (+ <code>.fai</code> / <code>.gzi</code>).
+  </p>
+  <ul>
+    <li><a href="assets/tmap_silva_freqs.html"><strong>SILVA tmap + MSA HUD</strong></a></li>
+  </ul>
+
+  <h2>Where the Ty1 tmap data comes from</h2>
+  <p>
+    The <strong>2‑D plot</strong> (points, colours, labels, tree) is <strong>not</strong> loaded from an API.
+    It is baked into <code>assets/ty1_rbd_flag_p2_tmap.js</code> as a big <code>data</code> object (coordinates + per‑point labels),
+    produced by an upstream Faerun/tmap export step and shipped in this bundle.
+  </p>
+  <p>
+    The <strong>MSA HUD</strong> loads <strong>sequence letters</strong> separately: by default from
+    <code>fixtures/poc_ty1_nr.fasta</code>, or from BGZF + <code>.fai</code> / <code>.gzi</code> under <code>?bgzf=…</code>.
+    That file must contain the same sequence ids as the plot labels (after the <code>s__</code> → id mapping in the bridge).
+  </p>
+  <ul>
+    <li><a href="biowasm_kalign_example.html">BioWasm kalign example</a></li>
+    <li><a href="bgzf_faidx_spike.html">BGZF + faidx spike</a> (see page for <code>?gz=</code> / <code>?ids=</code>)</li>
+    <li>
+      <a href="assets/ty1_rbd_flag_p2_tmap.html?bgzf=../fixtures/RBD-flag-P2.trimmed.fa.gz">Ty1 tmap + MSA HUD (full P2 trimmed BGZF)</a>
+      — same library as the baked-in plot; use this on <strong>GitHub Pages</strong> for an end-to-end test.
+    </li>
+    <li>
+      <a href="assets/ty1_rbd_flag_p2_tmap.html?bgzf=../fixtures/poc_ty1_nr.fa.gz">Ty1 + small indexed fixture</a>
+      — tiny FASTA for quick loads; the plot still shows the <strong>full</strong> Ty1 set, so only points whose ids exist in that fixture can align. Prefer the full P2 link above for arbitrary selections.
+    </li>
+  </ul>
+  <p>
+    Setup, conda, and GitHub Actions are described in <code>README.md</code> in this folder (view on GitHub; it is not rendered as HTML here).
+  </p>
+</body>
+</html>

@@ -1,0 +1,16 @@
+# Conda env for ftmap_poc (Python on all platforms).
+#
+# samtools / bgzip: Linux, macOS, or WSL — then:
+#   conda install -c conda-forge -c bioconda "samtools>=1.21"
+#
+#   conda env create -f environment.yml
+#   conda activate ftmap_poc
+#
+# Update: conda env update -f environment.yml --prune
+name: ftmap_poc
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python >=3.11,<3.14

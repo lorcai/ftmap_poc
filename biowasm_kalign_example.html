@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BioWasm kalign example (browser_msa_poc)</title>
+</head>
+<body>
+  <h4>Output of <code>kalign</code>:</h4>
+  <pre id="output">Loading…</pre>
+
+  <script src="https://biowasm.com/cdn/v3/aioli.js"></script>
+  <script type="module">
+    const CLI = await new Aioli(["kalign/3.3.1"]);
+
+    // Sample data (source: https://github.com/TimoLassmann/kalign/blob/master/dev/data/BB11001.tfa)
+    await CLI.mount({
+      name: "input.fa",
+      data: `>1aab_
+GKGDPKKPRGKMSSYAFFVQTSREEHKKKHPDASVNFSEFSKKCSERWKT
+MSAKEKGKFEDMAKADKARYEREMKTYIPPKGE
+>1j46_A
+MQDRVKRPMNAFIVWSRDQRRKMALENPRMRNSEISKQLGYQWKMLTEAE
+KWPFFQEAQKLQAMHREKYPNYKYRPRRKAKMLPK
+>1k99_A
+MKKLKKHPDFPKKPLTPYFRFFMEKRAKYAKLHPEMSNLDLTKILSKKYK
+ELPEKKKMKYIQDFQREKQEFERNLARFREDHPDLIQNAKK
+>2lef_A
+MHIKKPLNAFMLYMKEMRANVVAESTLKESAAINQILGRRWHALSREEQA
+KYYELARKERQLHMQLYPGWSARDNYGKKKKRKREK`,
+    });
+
+    await CLI.exec("kalign input.fa -f fasta -o result.fasta");
+    const result = await CLI.cat("result.fasta");
+
+    const el = document.getElementById("output");
+    el.textContent = result;
+  </script>
+</body>
+</html>

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BGZF + faidx spike (BioWasm samtools)</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 56rem; margin: 1rem auto; padding: 0 1rem; }
+    pre { background: #111; color: #eee; padding: 0.75rem; overflow: auto; white-space: pre-wrap; }
+    .ok { color: #2a7; }
+    .bad { color: #c42; }
+    code { background: #eee; padding: 0.1em 0.35em; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <h1>BGZF + <code>faidx</code> spike</h1>
+  <p>
+    Mounts a BGZF FASTA + <code>.fai</code> + <code>.gzi</code>, runs <code>samtools faidx</code> in WASM,
+    optionally compares to a <strong>small</strong> plain FASTA (never use a multi‑GB uncompressed file as baseline).
+  </p>
+  <p>
+    <strong>Optional large library</strong> (only if you serve that file from the same host):
+    <code>?gz=/data/Ty1/Processed/RBD-flag-P2.trimmed.fa.gz&amp;ids=…</code> (leading <code>/</code> = origin root — use a local server from repo root, or use a full <code>https://…</code> <code>gz</code> URL).
+    For this package alone, use <code>?gz=fixtures/poc_ty1_nr.fa.gz</code> (relative).
+    Baseline defaults to <code>fixtures/poc_ty1_nr.fasta</code>. Add <code>&amp;nobaseline=1</code> to skip.
+    Optional: <code>&amp;baseline=fixtures/other.fasta</code> or absolute URL.
+  </p>
+  <p><strong>Local:</strong> <code>cd</code> into this folder, then <code>python -m http.server 8080</code> — open <code>http://localhost:8080/bgzf_faidx_spike.html</code>.</p>
+  <p id="config"></p>
+  <p id="status">Initializing…</p>
+  <h2>samtools faidx (WASM)</h2>
+  <pre id="faidx-out">—</pre>
+  <h2>Baseline (plain FASTA)</h2>
+  <pre id="baseline-out">—</pre>
+  <h2>Match check</h2>
+  <pre id="check-out">—</pre>
+
+  <script src="https://biowasm.com/cdn/v3/aioli.js"></script>
+  <script type="module">
+    try {
+    const params = new URLSearchParams(window.location.search);
+    const DEFAULT_IDS = ["RBD-flag-P2_4_20944", "RBD-flag-P2_1_34421"];
+    const IDS = (params.get("ids") || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (IDS.length === 0) DEFAULT_IDS.forEach((id) => IDS.push(id));
+
+    const gzParam = params.get("gz");
+    const spikeDir = new URL(".", window.location.href);
+    const FIX = new URL("fixtures/", window.location.href);
+
+    let gzUrl;
+    let gzInternalName;
+    if (gzParam) {
+      if (gzParam.startsWith("http://") || gzParam.startsWith("https://")) {
+        gzUrl = gzParam;
+      } else if (gzParam.startsWith("/")) {
+        gzUrl = new URL(gzParam, window.location.origin).href;
+      } else {
+        gzUrl = new URL(gzParam, spikeDir).href;
+      }
+      gzInternalName = new URL(gzUrl).pathname.split("/").filter(Boolean).pop();
+    } else {
+      gzUrl = new URL("poc_ty1_nr.fa.gz", FIX).href;
+      gzInternalName = "poc_ty1_nr.fa.gz";
+    }
+
+    const faiUrl = gzUrl + ".fai";
+    const gziUrl = gzUrl + ".gzi";
+
+    const nobaseline = params.has("nobaseline") && params.get("nobaseline") !== "0";
+    let baselineUrl = null;
+    if (!nobaseline) {
+      const b = params.get("baseline");
+      if (b) {
+        if (b.startsWith("http://") || b.startsWith("https://")) {
+          baselineUrl = b;
+        } else if (b.startsWith("/")) {
+          baselineUrl = new URL(b, window.location.origin).href;
+        } else {
+          baselineUrl = new URL(b, spikeDir).href;
+        }
+      } else if (gzParam) {
+        baselineUrl = new URL("fixtures/poc_ty1_nr.fasta", spikeDir).href;
+      } else {
+        baselineUrl = new URL("poc_ty1_nr.fasta", FIX).href;
+      }
+    }
+
+    document.getElementById("config").textContent =
+      "gz: " + gzInternalName + " | baseline: " + (baselineUrl || "(off)") + " | ids: " + IDS.join(", ");
+
+    function parseFasta(text) {
+      const map = new Map();
+      const lines = text.split(/\r?\n/);
+      let curId = null;
+      let parts = [];
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (line.startsWith(">")) {
+          if (curId !== null) map.set(curId, parts.join(""));
+          curId = line.slice(1).trim().split(/\s+/)[0];
+          parts = [];
+        } else if (curId !== null && line.length) parts.push(line.trim());
+      }
+      if (curId !== null) map.set(curId, parts.join(""));
+      return map;
+    }
+
+    function execText(r) {
+      if (typeof r === "string") return r;
+      if (r && typeof r.stdout === "string") return r.stdout;
+      return String(r);
+    }
+
+    function seqOnly(fastaRecord) {
+      return fastaRecord.replace(/^[^\n]*\n/, "").replace(/\n/g, "");
+    }
+
+    function setStatus(msg) {
+      document.getElementById("status").textContent = msg;
+    }
+
+    let baselineMap = new Map();
+    if (baselineUrl) {
+      setStatus("Fetching baseline FASTA…");
+      const fastaRes = await fetch(baselineUrl);
+      if (!fastaRes.ok) throw new Error("fetch baseline: " + fastaRes.status + " " + baselineUrl);
+      baselineMap = parseFasta(await fastaRes.text());
+    } else {
+      setStatus("Skipping baseline fetch (nobaseline).");
+      document.getElementById("baseline-out").textContent = "(skipped)";
+    }
+
+    setStatus("Loading samtools WASM…");
+    const CLI = await new Aioli(["samtools/1.21"]);
+
+    await CLI.mount([
+      { name: gzInternalName, url: gzUrl },
+      { name: gzInternalName + ".fai", url: faiUrl },
+      { name: gzInternalName + ".gzi", url: gziUrl },
+    ]);
+
+    setStatus("Running samtools faidx…");
+    const faidxParts = [];
+    for (let i = 0; i < IDS.length; i++) {
+      const id = IDS[i];
+      const out = execText(
+        await CLI.exec("samtools", ["faidx", gzInternalName, id])
+      );
+      faidxParts.push("=== " + id + " ===\n" + out);
+    }
+    const faidxBlock = faidxParts.join("\n");
+    document.getElementById("faidx-out").textContent = faidxBlock;
+
+    if (baselineUrl) {
+      const baselineParts = [];
+      for (let i = 0; i < IDS.length; i++) {
+        const id = IDS[i];
+        const seq = baselineMap.get(id);
+        baselineParts.push(">" + id + "\n" + (seq || "(missing)"));
+      }
+      document.getElementById("baseline-out").textContent = baselineParts.join("\n\n");
+    }
+
+    const checkEl = document.getElementById("check-out");
+    if (!baselineUrl) {
+      checkEl.textContent = "Skipped (nobaseline). Compare faidx output to desktop samtools or a small FASTA by hand.";
+      checkEl.className = "ok";
+      setStatus("Done — faidx only.");
+    } else {
+      const checkLines = [];
+      let allOk = true;
+      for (let i = 0; i < IDS.length; i++) {
+        const id = IDS[i];
+        const fromFaidx = seqOnly(
+          faidxParts[i].replace(/^=== [^=]+ ===\n/, "")
+        );
+        const want = baselineMap.get(id);
+        const ok = want !== undefined && fromFaidx === want;
+        if (!ok) allOk = false;
+        checkLines.push(
+          id + ": " + (ok ? "MATCH" : "MISMATCH") +
+            " (faidx len " + fromFaidx.length + ", baseline len " + (want ? want.length : "?") + ")"
+        );
+      }
+      checkEl.textContent = checkLines.join("\n");
+      checkEl.className = allOk ? "ok" : "bad";
+      setStatus(allOk ? "Done — sequences match baseline." : "Done — see mismatch above.");
+    }
+    } catch (e) {
+      document.getElementById("status").textContent =
+        "Error: " + (e && e.message ? e.message : e);
+      document.getElementById("check-out").textContent = e && e.stack ? e.stack : String(e);
+      document.getElementById("check-out").className = "bad";
+    }
+  </script>
+</body>
+</html>
