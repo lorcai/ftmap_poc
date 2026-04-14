@@ -36,28 +36,28 @@ window.TMAP_MSA = Object.assign(
     return map(String(rawLabel));
   }
 
-  function pointIndexFromSelectedItem(it) {
-    if (it.item && typeof it.item.index === "number") return it.item.index;
+  /**
+   * Lore selection entries use different index fields; Faerun’s UI calls
+   * `octreeHelpers[source].removeSelected(item.index)` (not `item.item.index`).
+   * Clearing with the wrong field no-ops, so Highlight looked like “add only.”
+   */
+  function pointIndexForRemoveSelected(it) {
     if (typeof it.index === "number") return it.index;
+    if (it.item && it.item.e && typeof it.item.e.index === "number") return it.item.e.index;
+    if (it.item && typeof it.item.index === "number") return it.item.index;
     return null;
   }
 
   window.clearTmapPlotSelection = function clearTmapPlotSelection() {
     const f = window.tmapFaerun;
     if (!f || !f.octreeHelpers || !f.selectedItems) return;
-    let guard = 0;
-    while (f.selectedItems.length > 0 && guard < 100000) {
-      guard += 1;
-      const before = f.selectedItems.length;
-      const it = f.selectedItems[0];
+    const snapshot = [...f.selectedItems];
+    for (const it of snapshot) {
       const oh = f.octreeHelpers[it.source];
-      const idx = pointIndexFromSelectedItem(it);
+      const idx = pointIndexForRemoveSelected(it);
       if (oh && idx != null && typeof oh.removeSelected === "function") {
         oh.removeSelected(idx);
-      } else {
-        break;
       }
-      if (f.selectedItems.length >= before) break;
     }
   };
 
