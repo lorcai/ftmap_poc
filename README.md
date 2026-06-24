@@ -64,3 +64,8 @@ For **Nightingale integration**, `TMAP_MSA` contract, and pitfalls (manager view
 - `js/bridge.js` — selection → FASTA ids
 - `js/msa_hud_module.js` — faidx + kalign HUD
 - `.nojekyll` — disable Jekyll on Pages
+
+## To do
+- Move everything to a scrollable side panel
+- Allow species parsing from sequence identifier list (will require taxonomic mapping file but doable)
+- Allow highlighting sequences by species (avoid cluttering UI more)
